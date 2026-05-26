@@ -1,7 +1,7 @@
 # churn-mlops
-# End-to-end MLOps pipeline for churn prediction using DVC, MLflow, FastAPI, CI/CD.
+## End-to-end MLOps pipeline for churn prediction using DVC, MLflow, FastAPI, CI/CD.
 
-# Enterprise Customer Churn Prediction System: MLOps Architecture & Infrastructure Handbook
+## Enterprise Customer Churn Prediction System: MLOps Architecture & Infrastructure Handbook
 
 ## 1. Executive Summary & Business Architecture
 This documentation outlines the end-to-end engineering implementation for an autonomous Customer Churn Prediction platform. The platform converts raw, multi-source CRM and telemetry data into a continuous stream of real-time risk evaluations. 
