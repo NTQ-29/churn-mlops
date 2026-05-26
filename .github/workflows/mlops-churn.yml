@@ -13,6 +13,11 @@ jobs:
     name: Run End-to-End MLOps Pipeline
     runs-on: ubuntu-latest
 
+    # ADD THESE LINES HERE TO FIX THE 403 ERROR 
+    permissions:
+      contents: read
+      issues: write
+
     # Set up pipeline-wide environment variables
     env:
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
