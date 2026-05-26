@@ -41,7 +41,7 @@ jobs:
 
       - name:  Run Shadow Evaluation (Staging vs Production)
         run: |
-          python src/shadow_evaluate.py
+          python shadow_evaluate.py
 
       - name:  Run Promotion Gate & Registry Update
         id: promotion_gate
