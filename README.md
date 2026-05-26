@@ -1,4 +1,4 @@
-### End-to-end MLOps pipeline for churn prediction using DVC, MLflow, FastAPI, CI/CD.
+#### **End-to-end MLOps pipeline for churn prediction using DVC, MLflow, FastAPI, CI/CD.
 
 ## Enterprise Customer Churn Prediction System: MLOps Architecture & Infrastructure Handbook
 
