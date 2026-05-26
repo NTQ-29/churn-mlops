@@ -8,22 +8,23 @@ on:
   schedule:
     - cron: "0 14 * * 1"   # 7 AM MST = 14:00 UTC
 
+permissions:
+  contents: read
+  issues: write
+
+env:
+  AWS_REGION: us-east-1                     # Adjust to your preferred AWS region
+  ECR_REPOSITORY: churn-inference-service   # The name of your AWS container registry repo
+
 jobs:
   pipeline:
     name: Run End-to-End MLOps Pipeline
     runs-on: ubuntu-latest
-
-    # ADD THESE LINES HERE TO FIX THE 403 ERROR 
-    permissions:
-      contents: read
-      issues: write
-
-    # Set up pipeline-wide environment variables
+    
     env:
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-      # Add your cloud provider credentials here if MLflow is hosted privately
-      # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
 
     steps:
       - name: Checkout repo
@@ -32,8 +33,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11" # Adjusted to match your script requirements
-          cache: 'pip'          # Speeds up subsequent runs by caching dependencies
+          python-version: "3.11"
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -44,22 +45,53 @@ jobs:
         run: |
           python train.py
 
-      - name:  Run Shadow Evaluation (Staging vs Production)
+      - name: Run Shadow Evaluation (Staging vs Production)
         run: |
           python shadow_evaluate.py
 
-      - name:  Run Promotion Gate & Registry Update
-        id: promotion_gate
+      - name: Run Promotion Gate & Registry Update
         run: |
           python promote_if_ready.py
 
-      - name:  Trigger Cloud Deployment
-        if: success()
-        run: |
-          echo "Model successfully promoted! Triggering deployment to cloud service..."
-          # This will link directly to Step 4 of your roadmap (e.g., triggering a webhook, updating an image tag)
+      # ========================================================
+      # NEW AWS DEPLOYMENT BLOCK STARTED BELOW
+      # ========================================================
+      - name: Configure AWS Credentials
+        if: success() && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name:  Handle Workflow Failure Notification
+      - name: Login to Amazon ECR
+        if: success() && github.ref == 'refs/heads/main'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build the container using our optimized Dockerfile
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          
+          # Push both the unique commit tag and the 'latest' tag to AWS ECR
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Trigger Cloud Deployment Notification
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          echo "🎉 Success! The lightweight multi-stage image has been pushed to AWS ECR."
+          echo "AWS App Runner or ECS can now automatically deploy the fresh container."
+
+      # ========================================================
+      # SYSTEM ERROR HANDLING NOTIFICATIONS
+      # ========================================================
+      - name: Handle Workflow Failure Notification
         if: failure()
         uses: actions/github-script@v7
         with:
