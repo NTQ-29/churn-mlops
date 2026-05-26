@@ -1,0 +1,50 @@
+experiment_name: "churn_phoenix_experiment"
+run_name: "baseline_churn_model"
+
+tracking:
+  tracking_uri: "http://localhost:5000"   # or leave empty for local ./mlruns
+  registered_model_name: "churn_classifier"
+
+data:
+  train_path: "data/processed/train.csv"
+  test_path: "data/processed/test.csv"
+  target_column: "churn"
+
+features:
+  categorical:
+    - "contract_type"
+    - "payment_method"
+    - "internet_service"
+  numerical:
+    - "tenure_months"
+    - "monthly_charges"
+    - "total_charges"
+
+model:
+  class_path: "sklearn.ensemble.RandomForestClassifier"
+  params:
+    n_estimators: 200
+    max_depth: 10
+    min_samples_split: 4
+    min_samples_leaf: 2
+    random_state: 42
+    n_jobs: -1
+
+training:
+  test_size: 0.2
+  random_state: 42
+  stratify: true
+
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "roc_auc"
+
+artifacts:
+  output_dir: "artifacts"
+  confusion_matrix_path: "artifacts/confusion_matrix.png"
+  roc_curve_path: "artifacts/roc_curve.png"
+  feature_importance_path: "artifacts/feature_importance.png"
